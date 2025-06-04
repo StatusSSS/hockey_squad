@@ -1,0 +1,17 @@
+[Unit]
+Description=Hockey Squad Scraper
+After=network.target
+
+[Service]
+User=<SYSTEM_USER>
+Group=<SYSTEM_GROUP>
+
+WorkingDirectory=<ABSOLUTE_PATH_TO>/hockey_squad_scraper
+EnvironmentFile=<ABSOLUTE_PATH_TO>/hockey_squad_scraper/deploy/.env
+ExecStart=<ABSOLUTE_PATH_TO>/hockey_squad_scraper/venv/bin/python -m hockey_squad_scraper.runner
+
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
