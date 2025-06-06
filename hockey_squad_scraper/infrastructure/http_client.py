@@ -1,11 +1,14 @@
-import time
 import random
-import requests
+import time
 from typing import Optional
 
+import requests
+from requests.exceptions import ProxyError, ConnectTimeout, SSLError, HTTPError, ReadTimeout
+
 from hockey_squad_scraper.infrastructure.config import Settings
-from hockey_squad_scraper.infrastructure.proxies import build
+from hockey_squad_scraper.infrastructure.proxies import ProxyPool
 from hockey_squad_scraper.infrastructure.logger import logger
+
 
 FL_WEB_HEADERS = {
     'accept':
@@ -29,56 +32,53 @@ FL_WEB_HEADERS = {
         'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
 }
 
-MAX_RETRIES = 5
-INITIAL_DELAY_RANGE = (10, 20)
-
-
 
 class HttpClient:
     """
-    Мини-обёртка над requests:
-      • один метод get()
-      • прокси из .env
-      • хедеры Flashscore
-      • MAX_RETRIES + задержка между запросами
+    GET с прокси-ротацией:
     """
 
-    def __init__(self, cfg: Settings):
-        self.cfg: Settings = cfg
-        self.proxies: Optional[dict] = build(cfg.proxy_raw)
-        delay = random.randint(*INITIAL_DELAY_RANGE)
-        logger.info(
-            "HttpClient init: proxy {}, initial delay {}s",
-            "ON" if self.proxies else "OFF",
-            delay,
-        )
+    def __init__(self, cfg: Settings, proxy_pool: Optional[ProxyPool] = None) -> None:
+        self.cfg = cfg
+        self.pool = proxy_pool or ProxyPool()
+        self.proxies = self.pool.next()
+        delay = random.randint(*self.cfg.initial_delay_range)
+        io, hi = self.cfg.initial_delay_range
+        if io < 0 or hi < 0 or io > hi:
+            raise ValueError("Initial_delay_range должен быть парой неотрицательных чисел MIN <= MAX")
+        logger.info("Proxy ON, initial delay {}s", delay)
         time.sleep(delay)
 
+    def _rotate_proxy(self) -> None:
+        self.proxies = self.pool.next()
+        logger.info("Switched proxy → {}", self.proxies["http"])
+
     def get(self, url: str, *, timeout: int = 30) -> str:
-        """
-        Скачивает HTML как текст.
-        • бросает RuntimeError после MAX_RETRIES неудач
-        • делает cfg.request_delay паузу ПОСЛЕ успешного запроса
-        """
         last_exc: Exception | None = None
-        logger.debug("GET {} (timeout={}s)", url, timeout)
-        for _ in range(MAX_RETRIES):
+        attempts_left = self.cfg.max_retries
+
+        while attempts_left:
+            logger.debug("GET {} via {} (timeout={}s)", url, self.proxies["http"], timeout)
             try:
                 resp = requests.get(
                     url,
                     timeout=timeout,
-                    headers=FL_WEB_HEADERS
+                    headers=FL_WEB_HEADERS,
+                    proxies=self.proxies,
                 )
                 resp.raise_for_status()
-
                 logger.info("{} {}", url, resp.status_code)
-
-                time.sleep(0.05)
+                time.sleep(self.cfg.request_delay)
                 return resp.text
-            except Exception as exc:
+
+            except (ProxyError, ConnectTimeout, SSLError, HTTPError, ReadTimeout) as exc:
                 last_exc = exc
-                logger.warning("GET {} failed (timeout={}s): {}", url, timeout, exc)
+                logger.warning("Proxy failed: {} → rotating", exc)
+                self._rotate_proxy()
+                attempts_left -= 1
                 time.sleep(1)
 
-        logger.opt(exception=last_exc).exception("GET {} aborted after {} retries", url, MAX_RETRIES)
+        logger.opt(exception=last_exc).exception(
+            "GET {} aborted after {} retries", url, self.cfg.max_retries
+        )
         raise RuntimeError(f"GET {url!r} failed") from last_exc
