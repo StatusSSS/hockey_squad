@@ -4,5 +4,5 @@ PyMySQL==1.1.1
 python-dotenv==1.1.0
 Requests==2.32.3
 tqdm==4.67.1
-lmxl
+lxml
 nano
