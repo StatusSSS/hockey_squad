@@ -7,7 +7,7 @@ from hockey_squad_scraper.infrastructure.db import DB
 
 class PlayersRepo:
     """
-    Держит кэш текущих игроков + all CRUD-операции
+    Репозиторий игроков: хранит кэш и предоставляет CRUD-операции
     """
 
     def __init__(self, db: DB):
@@ -17,7 +17,8 @@ class PlayersRepo:
 
 
     def refresh_cache(self) -> None:
-        """Загрузить всех игроков в память (как было в _get_current_players)."""
+        """Обновляет кэш: загружеает всех игроков из БД в память."""
+
         sql = """
             SELECT id, team_id, national_team_id, fl_id, position,
                    number, country_id, first_name, last_name
@@ -28,10 +29,8 @@ class PlayersRepo:
 
 
     def find_by_fl_id(self, fl_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Быстрый поиск игрока: сначала в кэше, потом (на всякий случай)
-        в базе. Повторяет логику _find_existing_player.
-        """
+        """Возвращает игрока по fl_id: сперва ищет в кэше, затем в БД"""
+
         for row in self.cache.values():
             if row["fl_id"] == fl_id:
                 return row
@@ -51,7 +50,8 @@ class PlayersRepo:
 
 
     def update_player(self, player_id: int, fields: Dict[str, Any]) -> None:
-        """Обновить произвольные поля игрока."""
+        """Обновляет указанные поля игрока и перезагрузить кэш."""
+
         if not fields:
             return
         sets, values = [], []
@@ -64,7 +64,8 @@ class PlayersRepo:
         self.refresh_cache()
 
     def insert_player(self, data: Dict[str, Any]) -> int:
-        """Добавить нового игрока и вернуть его id (как в _create_new_player)."""
+        """Создает нового игрока и вернуть его id."""
+
         cols, values = zip(*[(k, v) for k, v in data.items() if v is not None])
         placeholders = ", ".join(["%s"] * len(values))
         sql = f"""
@@ -77,10 +78,8 @@ class PlayersRepo:
         return player_id
 
     def clear_team_link(self, player_id: int, field: str) -> None:
-        """
-        Убрать привязку игрока к club/national (как _remove_player_from_squad).
-        `field` = 'team_id' или 'national_team_id'.
-        """
+        """Сбросить связь с командой/сборной у игрока."""
+
         sql = f"UPDATE hockey_players SET {field} = NULL, updated_at = NOW() WHERE id = %s"
         self.db.cur.execute(sql, (player_id,))
         self.refresh_cache()
@@ -92,10 +91,8 @@ class PlayersRepo:
             first_name: Optional[str],
             last_name: Optional[str],
     ) -> None:
-        """
-        Добавляет строку в hockey_player_translations.
-        Аналог куска из _create_new_player.
-        """
+        """Добавляет русскую локализацию имени и фамилии игрока."""
+
         sql = """
             INSERT INTO hockey_player_translations
                    (hockey_player_id, locale, title, first_name, last_name, locale_enabled)

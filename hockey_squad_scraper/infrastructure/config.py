@@ -18,7 +18,7 @@ class Settings:
         int(os.getenv("INITIAL_DELAY_MIN")),
         int(os.getenv("INITIAL_DELAY_MAX")),
     )
-    request_delay: float = 1
+    request_delay: int = 1
     error_delay: int = 60
     main_loop_delay: int = 3600
     max_retries: int = 5

@@ -11,7 +11,7 @@ class TeamsRepo:
 
 
     def list_teams(self) -> List[Dict[str, Any]]:
-        """Вернуть все команды (club + national)."""
+        """Возвращает все команды (club + national)."""
         sql = """
             SELECT t.id               AS id,
                    t.fl_id            AS fl_id,

@@ -34,10 +34,6 @@ FL_WEB_HEADERS = {
 
 
 class HttpClient:
-    """
-    GET с прокси-ротацией:
-    """
-
     def __init__(self, cfg: Settings, proxy_pool: Optional[ProxyPool] = None) -> None:
         self.cfg = cfg
         self.pool = proxy_pool or ProxyPool()

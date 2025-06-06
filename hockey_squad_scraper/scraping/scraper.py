@@ -47,6 +47,7 @@ class SquadScraper:
         countries_repo: CountriesRepo,
         cfg,
     ):
+        """Добавляет инициализацию зависимостей и конфигурации"""
         self.db = db
         self.http = http
         self.teams = teams_repo
@@ -56,7 +57,7 @@ class SquadScraper:
 
 
     def run_one_cycle(self) -> None:
-        """Спарсить всех и зафиксировать изменения."""
+        """Добавляет одиночный цикл парсинга всех команд и фиксации изменений"""
         for team in tqdm(self.teams.list_teams(), desc="Teams"):
             try:
                 self._process_team(team)
@@ -65,11 +66,7 @@ class SquadScraper:
 
 
     def _process_team(self, team: Dict[str, Any]) -> None:
-        """
-        • скачивает HTML «состав команды»
-        • определяет club / national
-        • синхронизирует игроков
-        """
+        """Добавляет полный процесс обработки одной команды: загрузка HTML, синхронизация игроков"""
         url = f"https://www.flashscore.com/team/{team['fl_slug']}/{team['fl_id']}/squad/"
         logger.debug("Scrapping: {}", url)
         self.any_updates = False
@@ -102,6 +99,7 @@ class SquadScraper:
 
 
     def _determine_if_club(self, soup: BeautifulSoup) -> bool:
+        """Добавляет определение, является ли команда клубом или сборной"""
         flag_spans = soup.select("span.breadcrumb__flag")
         if not flag_spans:
             return True
@@ -109,6 +107,7 @@ class SquadScraper:
         return not any(cls in self.NATIONAL_TEAM_FLAGS for cls in classes)
 
     def _update_team_national_status(self, team: Dict[str, Any], is_club: bool) -> None:
+        """Добавляет обновление статуса команды (клуб/сборная) в базе данных"""
         if is_club and team["is_national"] == 1:
             sql = "UPDATE hockey_teams SET is_national=0, updated_at=NOW() WHERE id=%s"
             self.db.cur.execute(sql, (team["id"],))
@@ -122,6 +121,7 @@ class SquadScraper:
 
 
     def _get_position_from_table(self, table) -> Optional[str]:
+        """Добавляет извлечение позиции игрока из заголовка таблицы"""
         header = table.select("div.lineupTable__title")
         if not header:
             return None
@@ -139,6 +139,7 @@ class SquadScraper:
     def _extract_players_from_table(
         self, table, position: str, team: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
+        """Добавляет извлечение списка игроков из таблицы конкретной позиции"""
         players = []
         for row in table.select("div.lineupTable__row"):
             player = {
@@ -152,6 +153,7 @@ class SquadScraper:
         return players
 
     def _extract_player_number(self, row) -> Optional[int]:
+        """Добавляет извлечение игрового номера игрока"""
         cell = row.select("div.lineupTable__cell.lineupTable__cell--jersey")
         if not cell:
             return None
@@ -160,6 +162,7 @@ class SquadScraper:
 
 
     def _extract_player_info(self, row) -> Dict[str, Any]:
+        """Добавляет извлечение основной информации об игроке (имя, страна, id)"""
         cell_wrap = row.select("div.lineupTable__cell.lineupTable__cell--player")
         if not cell_wrap:
             return {}
@@ -182,6 +185,7 @@ class SquadScraper:
         }
 
     def _extract_player_country(self, cell) -> Optional[int]:
+        """Добавляет извлечение идентификатора страны игрока"""
         flag = cell.select("div.lineupTable__cell--flag")
         if not flag:
             return None
@@ -190,6 +194,7 @@ class SquadScraper:
 
     @staticmethod
     def _parse_player_name(name: str) -> tuple[str, Optional[str], Optional[str]]:
+        """Добавляет парсинг полного имени игрока на краткую форму и отдельные части"""
         if name.count(" ") == 1:
             last, first = name.split()
             return f"{first[0]}. {last}", first, last
@@ -197,6 +202,7 @@ class SquadScraper:
 
 
     def _get_current_squad_ids(self, team_id: int, is_club: bool) -> Set[int]:
+        """Добавляет получение текущего набора ID игроков команды из кеша"""
         ids: Set[int] = set()
         for pid, p in self.players.cache.items():
             if is_club and p["team_id"] == team_id:
@@ -208,6 +214,7 @@ class SquadScraper:
     def _process_player_record(
         self, pdata: Dict[str, Any], team_id: int, is_club: bool
     ) -> Optional[int]:
+        """Добавляет обработку записи игрока: обновление или создание"""
         existing = self.players.find_by_fl_id(pdata["fl_id"])
         if existing:
             return self._update_existing_player(existing, pdata, team_id, is_club)
@@ -221,6 +228,7 @@ class SquadScraper:
         team_id: int,
         is_club: bool,
     ) -> int:
+        """Добавляет обновление существующего игрока в репозитории"""
         pid = player["id"]
         fields: Dict[str, Any] = {}
 
@@ -243,6 +251,7 @@ class SquadScraper:
     def _create_new_player(
         self, pdata: Dict[str, Any], team_id: int, is_club: bool
     ) -> int:
+        """Добавляет создание нового игрока и его переводов в репозитории"""
         base = {
             "name": pdata["name"],
             "fl_id": pdata["fl_id"],
@@ -267,6 +276,7 @@ class SquadScraper:
     def _remove_players_not_in_squad(
         self, current_ids: Set[int], actual_ids: Set[int], is_club: bool
     ) -> None:
+        """Добавляет удаление игроков, которых больше нет в составе на Flashscore"""
         diff = current_ids - actual_ids
         field = "team_id" if is_club else "national_team_id"
         for pid in diff:
