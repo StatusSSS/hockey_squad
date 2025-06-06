@@ -18,13 +18,10 @@
 
 1. Клонируем репозиторий
     ```
-    sudo mkdir -p /opt && sudo chown $(whoami):$(whoami) /opt
    
-    cd /opt
+    git clone https://github.com/StatusSSS/hockey_squad.git
    
-    git clone https://github.com/StatusSSS/hockey_squad_scraper.git
-   
-    cd hockey_squad_scraper
+    cd hockey_squad
    ```
 
 2. Cоздаем virtualenv внутри проекта
@@ -38,7 +35,7 @@
     ```
     pip install --upgrade pip
     
-    pip install -r deploy/requirements.txt
+    pip install -r hockey_squad_scraper/deploy/requirements.txt
    ```
 
 4. В каталоге deploy лежит .env файл, перенесите его в корень проекта и заполните его
@@ -70,9 +67,9 @@ After=network.target
 User=<SYSTEM_USER>
 Group=<SYSTEM_GROUP>
 
-WorkingDirectory=<ABSOLUTE_PATH_TO>/hockey_squad_scraper
-EnvironmentFile=<ABSOLUTE_PATH_TO>/hockey_squad_scraper/deploy/.env
-ExecStart=<ABSOLUTE_PATH_TO>/hockey_squad_scraper/venv/bin/python -m hockey_squad_scraper.runner
+WorkingDirectory=<ABSOLUTE_PATH_TO>/hockey_squad
+EnvironmentFile=<ABSOLUTE_PATH_TO>/hockey_squad/.env
+ExecStart=<ABSOLUTE_PATH_TO>/hockey_squad/venv/bin/python -m hockey_squad_scraper.runner
 
 Restart=on-failure
 RestartSec=10
