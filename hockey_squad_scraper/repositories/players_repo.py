@@ -7,8 +7,7 @@ from hockey_squad_scraper.infrastructure.db import DB
 
 class PlayersRepo:
     """
-    Держит кэш текущих игроков + all CRUD-операции.
-    • При изменениях в базе кэш автоматически обновляется
+    Держит кэш текущих игроков + all CRUD-операции
     """
 
     def __init__(self, db: DB):
@@ -94,7 +93,7 @@ class PlayersRepo:
             last_name: Optional[str],
     ) -> None:
         """
-        Добавить строку в hockey_player_translations.
+        Добавляет строку в hockey_player_translations.
         Аналог куска из _create_new_player.
         """
         sql = """

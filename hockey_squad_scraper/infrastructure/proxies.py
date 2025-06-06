@@ -6,7 +6,7 @@ PROXY_FILE = Path(__file__).resolve().parents[1] / "proxies.txt"
 
 
 def _parse(proxy_raw: str) -> dict[str, str]:
-    """'host:port:user:pass' → requests-совместимый dict."""
+    """'host:port:user:pass"""
     host, port, user, pwd = proxy_raw.split(":")
     url = f"http://{user}:{pwd}@{host}:{port}"
     return {"http": url, "https": url}

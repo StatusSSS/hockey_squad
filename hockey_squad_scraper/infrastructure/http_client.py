@@ -64,7 +64,6 @@ class HttpClient:
                     url,
                     timeout=timeout,
                     headers=FL_WEB_HEADERS,
-                    proxies=self.proxies,
                 )
                 resp.raise_for_status()
                 logger.info("{} {}", url, resp.status_code)
