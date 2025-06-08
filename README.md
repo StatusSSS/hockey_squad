@@ -26,7 +26,7 @@
 
 2. Cоздаем virtualenv внутри проекта
     ```
-    python3.10 -m venv venv
+    python3 -m venv venv
     
     source venv/bin/activate
    ```
@@ -46,7 +46,7 @@
     DB_USER=
     DB_PASS=
     DB_NAME=
-    DB_SSL_CA= можете оставить пустым если его нет
+    DB_SSL_CA= 
    ```
 
 5. Проверяем, что скрипт запускается вручную
